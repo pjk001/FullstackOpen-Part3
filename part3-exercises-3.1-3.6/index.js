@@ -27,10 +27,6 @@ app.use(
 
 
 
-
-
-
-
 let persons = [
   { 
     "id": 1,
@@ -88,8 +84,8 @@ app.get('/info', (request, response) => {
 
 const generateId = () => {
   const maxId = persons.length > 0
-  ? Math.floor(Math.random() * 1000) + 1
-  : 0
+    ? Math.max(...persons.map(p => p.id))
+    : 0
   return maxId + 1
 }
 
