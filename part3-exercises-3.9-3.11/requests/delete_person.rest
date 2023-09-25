@@ -1,0 +1,2 @@
+# testing out deletion of a person in VS REST Client
+DELETE http://localhost:3001/api/persons/2
