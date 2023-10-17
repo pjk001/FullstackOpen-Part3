@@ -1,19 +1,11 @@
 const express = require('express') //imports express
+const app = express()
 const morgan = require('morgan')  //imports morgan
 const cors = require('cors')  //imports cors
 require('dotenv').config()
 
 const Person = require('./models/person')
 
-
-
-
-const app = express()
-
-app.use(cors())
-app.use(express.static('dist'))
-app.use(express.json())
-app.use(morgan('tiny'))
 
 
 //* know this!
@@ -32,16 +24,15 @@ app.use(
 )
 
 
-let persons = [
-
-]
 
 const errorHandler = (error, request, response, next) => {
   console.error(error.message)
 
   if (error.name === 'CastError') {
     return response.status(400).send({ error: 'malformatted id' })
-  } 
+  } else if (error.name === 'ValidationError') {
+    return response.status(400).json({error: error.message})
+  }
 
   next(error)
 }
@@ -49,6 +40,11 @@ const errorHandler = (error, request, response, next) => {
 const unknownEndpoint = (request, response) => {
   response.status(404).send({ error: 'unknown endpoint' })
 }
+
+app.use(cors())
+app.use(express.static('dist'))
+app.use(express.json())
+app.use(morgan('tiny'))
 
 
 app.get('/api/persons', (request, response) => {
@@ -86,38 +82,30 @@ app.get('/info', (request, response) => {
 })
 
 
-/*
-const generateId = () => {
-  const maxId = persons.length > 0
-    ? Math.max(...persons.map(p => p.id))
-    : 0
-  return maxId + 1
-}
-*/
 
 //adding
-app.post('/api/persons', (request, response) => {
+app.post('/api/persons', (request, response, next) => {
   const body = request.body
 
-  
-  if (body.name === undefined || body.number === undefined) {
-    return response.status(400).json({ //! calling return is crucial here otherwise, the note will end up getting added
-      error: 'content missing'
-    })
-  } else if (Person.find({ name: body.name})) {   //mongoose syntax: if Person object found with the same name as the current body.name then...
-    return response.status(400).json({
-      error: 'name must be unique'
-    })
-  }
+  Person.findOne({ name: body.name })
+    .then(existingPerson => {
 
-  const person = new Person({
-    name: body.name,
-    number: body.number
-  })
+      if(existingPerson) {
+        return response.status(400).json({ error: 'name must be unique' })
+      } else {
+        
+        const person = new Person({
+          name: body.name,
+          number: body.number
+        })
 
-  person.save().then(savedPerson => {
-    response.json(savedPerson)
-  })
+
+        person.save().then(savedPerson => {
+          response.json(savedPerson)
+        })
+        .catch(error => next(error))
+      }
+    })
 })
 
 
